@@ -1,89 +1,96 @@
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <unistd.h>
-#include <sys/types.h>
-#include <sys/stat.h>
-#include <dirent.h>
-#include <errno.h>
+/* nftw_dir_tree.c
+   Demonstrate the use of nftw(3). Walk though the directory tree specified
+   on the command line (or the current working directory if no directory
+   is specified on the command line), displaying an indented hierarchy
+   of files in the tree. For each file, display:
+      * a letter indicating the file type (using the same letters as "ls -l")
+      * a string indicating the file type, as supplied by nftw()
+      * the file's i-node number.
+*/
+#define _GNU_SOURCE
+#define _XOPEN_SOURCE 600 /* Get nftw() */
+#include <ftw.h>
+#include <sys/types.h>    /* Type definitions used by many programs */
+#include <stdio.h>        /* Standard I/O functions */
+#include <stdlib.h>       /* Prototypes of commonly used library functions,
+                             plus EXIT_SUCCESS and EXIT_FAILURE constants */
+#include <unistd.h>       /* Prototypes for many system calls */
+#include <errno.h>        /* Declares errno and defines error constants */
+#include <string.h>       /* Commonly used string-handling functions */
+
 #include <pwd.h>
 #include <grp.h>
-#include <time.h>
-#include <sys/time.h>
-#include <sys/wait.h>
-#include <sys/ioctl.h>
-#include <sys/mount.h>
-#include <sys/utsname.h>
-#include <sys/sysinfo.h>
-#include <sys/vfs.h>
-#include <sys/statfs.h>
-#include <sys/statvfs.h>
-#include <sys/syscall.h>
-#include <ftw.h>
+#include <limits.h>
 
-#define MAX_PATH_LEN 1048576
-
-void tree(char *path ,int level)
-{
-    DIR *dir = opendir(path);
-    if (dir == NULL)
+int stringlength(char* str){
+    int i = 0;
+    while (str[i] != '\0')
     {
-        printf("\n");
-        return;
+        i++;
     }
-    struct dirent *entry;
-    while ((entry = readdir(dir)) != NULL)
-    {
-        if (entry->d_name[0] == '.')
-        {
-            continue;
-        }
-        for (int i = 0; i < level; i++)
-        {
-            printf("    ");
-        }
-        if (entry->d_type == DT_DIR)
-        {
-            printf("%s", entry->d_name);
-
-            //* HERE USUALLY IT FUCKS UP .
-            tree(strcat(strcat(path,"/"),(entry->d_name)) ,(level + 1));
-        }
-        else
-        {
-            struct stat st;
-            stat(entry->d_name, &st);
-            printf("[%s", (st.st_mode & S_IRUSR) ? "r" : "-");
-            printf("%s", (st.st_mode & S_IWUSR) ? "w" : "-");
-            printf("%s", (st.st_mode & S_IXUSR) ? "x" : "-");
-            printf("%s", (st.st_mode & S_IRGRP) ? "r" : "-");
-            printf("%s", (st.st_mode & S_IWGRP) ? "w" : "-");
-            printf("%s", (st.st_mode & S_IXGRP) ? "x" : "-");
-            printf("%s", (st.st_mode & S_IROTH) ? "r" : "-");
-            printf("%s", (st.st_mode & S_IWOTH) ? "w" : "-");
-            printf("%s ", (st.st_mode & S_IXOTH) ? "x" : "-");
-            struct passwd *pw = getpwuid(st.st_uid);
-            struct group *gr = getgrgid(st.st_gid);
-            printf("%s ", pw->pw_name);
-            printf("%s ", gr->gr_name);
-            printf("%ld] ", st.st_size);
-            printf("%s\n", entry->d_name);
-        }
-    }
-    closedir(dir);
+    return i;
 }
 
-int main(int argc, char const *argv[])
+static int              /* Callback function called by ftw() */
+dirTree(const char *pathname, const struct stat *sbuf, int type, struct FTW *ftwb)
 {
-    char path[MAX_PATH_LEN];
-    if (argc == 1)
-    {
-        getcwd(path, MAX_PATH_LEN);
+    // If hidden directory skip sub tree.
+    if(strstr(pathname, "/.") != NULL){
+        return FTW_SKIP_SUBTREE;
     }
-    else
-    {
-        strcpy(path, argv[1]);
+    // If current dir continue.
+    else if(!strcmp(pathname,".")){
+        return FTW_CONTINUE;
     }
-    tree(path,1);
-    return 0;
+     printf(" %*s", 4 * ftwb->level, " ");
+    if (type == FTW_NS) {                  /* Could not stat() file */
+        printf("?");
+    } else {
+        printf("[");
+        switch (sbuf->st_mode & S_IFMT) {  /* Print file type */
+        case S_IFREG:  printf("-"); break;
+        case S_IFDIR:  printf("d"); break;
+        case S_IFCHR:  printf("c"); break;
+        case S_IFBLK:  printf("b"); break;
+        case S_IFLNK:  printf("l"); break;
+        case S_IFIFO:  printf("p"); break;
+        case S_IFSOCK: printf("s"); break;
+        default:       printf("?"); break; /* Should never happen (on Linux) */
+        }
+    }
+    printf("%s", (sbuf->st_mode & S_IRUSR) ? "r" : "-");
+    printf("%s", (sbuf->st_mode & S_IWUSR) ? "w" : "-");
+    printf("%s", (sbuf->st_mode & S_IXUSR) ? "x" : "-");
+    printf("%s", (sbuf->st_mode & S_IRGRP) ? "r" : "-");
+    printf("%s", (sbuf->st_mode & S_IWGRP) ? "w" : "-");
+    printf("%s", (sbuf->st_mode & S_IXGRP) ? "x" : "-");
+    printf("%s", (sbuf->st_mode & S_IROTH) ? "r" : "-");
+    printf("%s", (sbuf->st_mode & S_IWOTH) ? "w" : "-");
+    printf("%s ", (sbuf->st_mode & S_IXOTH) ? "x" : "-");
+    struct passwd *pw = getpwuid(sbuf->st_uid);
+    struct group *gr = getgrgid(sbuf->st_gid);
+    printf("%s   ", pw->pw_name);
+    printf("%s ", gr->gr_name);
+    printf("%15ld" ,sbuf->st_size);
+    printf("] %s\n",  &pathname[ftwb->base]);     /* Print basename */
+    return 0;                                   /* Tell nftw() to continue */
+}
+
+int
+main(int argc, char *argv[])
+{
+    int flags = FTW_ACTIONRETVAL | FTW_DEPTH |FTW_CHDIR;
+    if(argc == 1){
+        if (nftw(".", dirTree, 10, flags) == -1) {
+        perror("nftw");
+        exit(EXIT_FAILURE);
+        }
+    }
+    else{
+        if (nftw(argv[1], dirTree, 10, flags) == -1) {
+        perror("nftw");
+        exit(EXIT_FAILURE);
+        }
+    }
+    exit(EXIT_SUCCESS);
 }
