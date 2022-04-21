@@ -1,8 +1,3 @@
-// Implementation for linux tree command . 
-
-
-
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -26,61 +21,36 @@
 #include <sys/syscall.h>
 #include <ftw.h>
 
-
-
 #define MAX_PATH_LEN 1048576
-#define MAX_BUF_LEN 1048576
-#define MAX_ARG_LEN 1048576
 
-
-
-
-
-
-
-
-// function receives a path as input 
-// and prints all the files in the directory and all of its subdirectories what so ever
-void tree (char *path)
+void tree(char *path ,int level)
 {
-
-    // open the directory
     DIR *dir = opendir(path);
-
-    // if the directory is not opened
     if (dir == NULL)
     {
-        printf("Error opening directory\n");
+        printf("\n");
         return;
     }
-    
-    // get the directory entry
     struct dirent *entry;
-
-    // while there are entries in the directory
     while ((entry = readdir(dir)) != NULL)
     {
-        // if the entry is a directory 
+        if (entry->d_name[0] == '.')
+        {
+            continue;
+        }
+        for (int i = 0; i < level; i++)
+        {
+            printf("    ");
+        }
         if (entry->d_type == DT_DIR)
         {
-            // if the entry is . or ..
-            if (strcmp(entry->d_name, ".") == 0 || strcmp(entry->d_name, "..") == 0)
-            {
-                continue;
-            }
-            else{
-            // print the directory name
             printf("%s", entry->d_name);
 
-            // call the function recursively
-            tree(entry->d_name);
-            }
+            //* HERE USUALLY IT FUCKS UP .
+            tree(strcat(strcat(path,"/"),(entry->d_name)) ,(level + 1));
         }
-         
-        // if the entry is a file
         else
         {
-            //print the file permissions
             struct stat st;
             stat(entry->d_name, &st);
             printf("[%s", (st.st_mode & S_IRUSR) ? "r" : "-");
@@ -92,26 +62,19 @@ void tree (char *path)
             printf("%s", (st.st_mode & S_IROTH) ? "r" : "-");
             printf("%s", (st.st_mode & S_IWOTH) ? "w" : "-");
             printf("%s ", (st.st_mode & S_IXOTH) ? "x" : "-");
-            // print the file owner and group
             struct passwd *pw = getpwuid(st.st_uid);
             struct group *gr = getgrgid(st.st_gid);
             printf("%s ", pw->pw_name);
             printf("%s ", gr->gr_name);
-            // print the file size in bytes
             printf("%ld] ", st.st_size);
-             // print the file name
             printf("%s\n", entry->d_name);
         }
     }
-
-    // close the directory
     closedir(dir);
 }
 
-
 int main(int argc, char const *argv[])
 {
-    // reading from argv the path to the directory , if there is no path , ./ is used as default path
     char path[MAX_PATH_LEN];
     if (argc == 1)
     {
@@ -121,14 +84,6 @@ int main(int argc, char const *argv[])
     {
         strcpy(path, argv[1]);
     }
-    // inputing the path to the function tree 
-    tree(path);
+    tree(path,1);
     return 0;
 }
-
-
-
-
-
-
-
