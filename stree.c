@@ -79,7 +79,7 @@ dirTree(const char *pathname, const struct stat *sbuf, int type, struct FTW *ftw
 int
 main(int argc, char *argv[])
 {
-    int flags = FTW_ACTIONRETVAL | FTW_DEPTH |FTW_CHDIR;
+    int flags = FTW_ACTIONRETVAL;
     if(argc == 1){
         if (nftw(".", dirTree, 10, flags) == -1) {
         perror("nftw");
