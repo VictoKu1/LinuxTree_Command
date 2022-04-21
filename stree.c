@@ -71,8 +71,8 @@ dirTree(const char *pathname, const struct stat *sbuf, int type, struct FTW *ftw
     struct group *gr = getgrgid(sbuf->st_gid);
     printf("%s   ", pw->pw_name);
     printf("%s ", gr->gr_name);
-    printf("%15ld" ,sbuf->st_size);
-    printf("] %s\n",  &pathname[ftwb->base]);     /* Print basename */
+    printf("%13ld" ,sbuf->st_size);
+    printf("]  %s\n",  &pathname[ftwb->base]);     /* Print basename */
     return 0;                                   /* Tell nftw() to continue */
 }
 
