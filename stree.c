@@ -28,7 +28,7 @@ void helper(const char *path, int level)
     struct dirent *entry;
     while ((entry = readdir(dir)) != NULL)
     {
-        if(entry->d_name[0] != '.')
+        if (entry->d_name[0] != '.')
         {
             arr[level]++;
         }
@@ -38,7 +38,8 @@ void helper(const char *path, int level)
 
 static int dirTree(const char *pathname, const struct stat *sbuf, int type, struct FTW *ftwb)
 {
-    if(strstr(pathname, "/.") != NULL){
+    if (strstr(pathname, "/.") != NULL)
+    {
         return FTW_SKIP_SUBTREE;
     }
     if (ftwb->level == 0)
