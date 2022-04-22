@@ -36,9 +36,12 @@ void helper(const char *path, int level)
 
 static int dirTree(const char *pathname, const struct stat *sbuf, int type, struct FTW *ftwb)
 {
+    if(strstr(pathname, "/.") != NULL){
+        return FTW_SKIP_SUBTREE;
+    }
     if (ftwb->level == 0)
     {
-        printf("%s\n", &pathname[ftwb->base]);
+        printf("%s\n", pathname);
         helper(&pathname[ftwb->base], ftwb->level + 1);
     }
     else
@@ -134,7 +137,7 @@ static int dirTree(const char *pathname, const struct stat *sbuf, int type, stru
 
 int main(int argc, char *argv[])
 {
-    int flags = FTW_CHDIR;
+    int flags = FTW_CHDIR | FTW_ACTIONRETVAL;
     if (argc == 1)
     {
         if (nftw(".", dirTree, 10, flags) == -1)
