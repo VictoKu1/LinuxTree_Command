@@ -28,9 +28,11 @@ void helper(const char *path, int level)
     struct dirent *entry;
     while ((entry = readdir(dir)) != NULL)
     {
-        arr[level]++;
+        if(entry->d_name[0] != '.')
+        {
+            arr[level]++;
+        }
     }
-    arr[level] -= 2;
     closedir(dir);
 }
 
