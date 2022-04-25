@@ -2,6 +2,7 @@
 #define _XOPEN_SOURCE 600
 #include <ftw.h>
 #include <sys/types.h>
+#include <sys/stat.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
@@ -15,6 +16,18 @@
 int arr[INT_MAX];
 int numberOfFiles = 0;
 int numberOfDirectories = 0;
+
+int checkifdir(const char *path){
+    struct stat statbuf;
+    if(stat(path, &statbuf) == -1)
+    {
+        return 0;
+    }
+    if(S_ISDIR(statbuf.st_mode)){
+        return 1;
+    }
+    return 0;
+}
 
 void helper(const char *path, int level)
 {
@@ -151,10 +164,16 @@ int main(int argc, char *argv[])
     }
     else
     {
-        if (nftw(argv[1], dirTree, 10, flags) == -1)
+        for (int i = 1; i < argc; i++)
         {
-            perror("nftw");
-            exit(EXIT_FAILURE);
+            if(!checkifdir(argv[i])){
+                printf("%s [error opening dir]\n", argv[i]);
+            }
+            else if (nftw(argv[i], dirTree, 10, flags) == -1)
+            {
+                perror("nftw");
+                exit(EXIT_FAILURE);
+            }
         }
     }
     printf("\n%d directories, %d files\n", numberOfDirectories, numberOfFiles);
