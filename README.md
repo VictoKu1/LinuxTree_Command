@@ -14,11 +14,25 @@ But it works with any legit path.
 
 ##### Installation and usage
 
+
+
+
+
+
+
+
+
 ```
 git clone https://github.com/VictoKu1/AP_Ex2.git
 cd AP_Ex2
 make
 ./stree
 ```
+
+
+
+
+
+
 
 
